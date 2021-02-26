@@ -8,43 +8,40 @@ import chan_fetch
 import tasks
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('GUILD')
-GUILD_ID = int(os.getenv('GUILD_ID'))
+DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
+CMD_PREFIX = os.getenv('CMD_PREFIX')
 POST_DELAY = int(os.getenv('POST_DELAY'))
 BATCH_SIZE = int(os.getenv('BATCH_SIZE'))
 IMGS_LIMIT = int(os.getenv('IMGS_LIMIT'))
 
 # initialize
-enabled_channels = {GUILD_ID: set()}
-bot = commands.Bot(command_prefix='chn ')
+enabled_channels = {}
+bot = commands.Bot(command_prefix=CMD_PREFIX)
 
 # util
-def current_enabled_channels():
-    return enabled_channels[GUILD_ID]
+def current_enabled_channels(guild):
+    return enabled_channels[guild.id]
 
-def is_channel_enabled(channel):
-    return channel in current_enabled_channels()
+def is_channel_enabled(guild, channel):
+    return channel.id in current_enabled_channels(guild)
 
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
-
-    guild = discord.utils.get(bot.guilds, name=GUILD)
-    print(
-        f'{bot.user} is connected to the following guild:\n'
-        f'{guild.name}(id: {guild.id})'
-    )
+    print("Connected to the following guilds:")
 
     # set of enabled channels to listen for commands in
     # should hold a list of channel ids
-    bot.enabled_channels = {GUILD_ID: {}}
+    for guild in bot.guilds:
+        print(guild.name)
+        enabled_channels[guild.id] = set()
 
 @bot.command(name='thread', help='Dump images from a thread.')
 async def thread(ctx, board: str=None, thread_id: int=None, limit: int=None):
     channel = ctx.channel
+    guild = ctx.guild
 
-    if not is_channel_enabled(channel):
+    if not is_channel_enabled(guild, channel):
         return
 
     if board == None:
@@ -70,21 +67,20 @@ async def thread(ctx, board: str=None, thread_id: int=None, limit: int=None):
 @bot.command(name='enable', help='Enable a-chan in this channel!')
 async def enable(ctx):
     channel = ctx.channel
-    current_enabled_channels().add(channel)
+    guild = ctx.guild
+    current_enabled_channels(guild).add(channel.id)
     await ctx.send(f"Enabled in channel '{channel}'")
 
 @bot.command(name='disable', help='Disable a-chan in this channel.')
 async def enable(ctx):
     channel = ctx.channel
-    current_enabled_channels().discard(ctx.channel)
+    guild = ctx.guild
+    current_enabled_channels(guild).discard(channel.id)
     await ctx.send(f"Disabled in channel '{channel}'")
 
 @bot.event
 async def on_error(event, *args, **kwargs):
     with open('err.log', 'a') as f:
-        if event == 'on_message':
-            f.write(f'Unhandled message: {args[0]}\n')
-        else:
-            raise
+        f.write(f'Unhandled message: {args[0]}\n')
 
-bot.run(TOKEN)
+bot.run(DISCORD_TOKEN)
