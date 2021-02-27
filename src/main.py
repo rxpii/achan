@@ -36,6 +36,7 @@ async def on_ready():
 
 @bot.command(name='thread', help='Dump images from a thread.')
 async def thread(ctx, board: str=None, thread_id: int=None, limit: int=IMGS_LIMIT):
+    author = ctx.message.author
     channel = ctx.channel
     guild = ctx.guild
 
@@ -58,15 +59,20 @@ async def thread(ctx, board: str=None, thread_id: int=None, limit: int=IMGS_LIMI
         await ctx.send(f'Invalid board or thread id.')
         return
 
+    log_out("INFO", f'Executed command [thread] {author} {channel} {guild} imgs: {len(img_urls)}')
+
     # post them, batch by batch
     await tasks.post_imgs(ctx, img_urls,
             batch_size=BATCH_SIZE, post_delay=POST_DELAY)
+
 
 @bot.command(name='enable', help='Enable a-chan in this channel!')
 async def enable(ctx):
     author = ctx.message.author
     channel = ctx.channel
     guild = ctx.guild
+
+    print("ENABLE", author, channel, guild)
 
     if not is_administrator(author):
         return
@@ -76,11 +82,15 @@ async def enable(ctx):
 
     await ctx.send(f"Enabled in channel '{channel}'")
 
+    log_out("INFO", f'Executed command [enable] {author} {channel} {guild}')
+
 @bot.command(name='disable', help='Disable a-chan in this channel.')
-async def enable(ctx):
+async def disable(ctx):
     author = ctx.message.author
     channel = ctx.channel
     guild = ctx.guild
+
+    print("DISABLE", author, channel, guild)
 
     if not is_administrator(author):
         return
@@ -90,11 +100,14 @@ async def enable(ctx):
 
     await ctx.send(f"Disabled in channel '{channel}'")
 
+    log_out("INFO", f'Executed command [disable] {author} {channel} {guild}')
+
 @bot.command(name='status', help='Check if a-chan is enabled in this channel.')
 async def status(ctx):
     author = ctx.message.author
     channel = ctx.channel
     guild = ctx.guild
+    print("STATUS", author, channel, guild)
 
     if not is_administrator(author):
         return
@@ -105,9 +118,10 @@ async def status(ctx):
     
     await ctx.send(response)
 
+    log_out("INFO", f'Executed command [status] {author} {channel} {guild}')
+
 @bot.event
 async def on_error(event, *args, **kwargs):
-    with open('err.log', 'a') as f:
-        f.write(f'Unhandled message: {args[0]}\n')
+    log_err(args[0])
 
 bot.run(DISCORD_TOKEN)
