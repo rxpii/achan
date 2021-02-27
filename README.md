@@ -12,6 +12,12 @@ only)
 `chn status`: check if achan is enabled in the current
 channel (admin only)
 
-`chn thread <board> <thread_id> [limit]`: dump the images of a
+`chn dump <board> <thread_id> [limit] [offset]`: dump the images of a
 thread on a board. Optionally limit the number of dumped
-images
+images. Subsequent calls to this command will infer 
+the offset of the next image to be dumped, if
+offset is not manually supplied
+
+`chn cont [limit] [offset]`: similar to `dump`, except the
+board and thread id parameters are inferred from the
+previous command

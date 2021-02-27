@@ -1,6 +1,7 @@
 import os
 import pickle
 import discord
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,11 +21,13 @@ def is_administrator(member):
             or member.id == 84756519870009344
 
 def write_enabled_channels(data_path, enabled_channels):
+    ensure_path(data_path)
     with open(data_path, "wb") as fd:
         pickle.dump(enabled_channels, fd)
     return
 
 def read_enabled_channels(data_path):
+    ensure_path(data_path)
     data = None
     with open(data_path, "rb") as fd:
         data = pickle.load(fd)
@@ -40,6 +43,31 @@ def ensure_path(path):
     directory = os.path.dirname(path)
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+# caching
+
+def hash_query(board, thread_id):
+    return str(board) + "_" + str(thread_id)
+
+def expired_result(result, expire_time):
+    result_timestamp = result['requested_at']
+    elapsed_time = time.time() - result_timestamp
+
+    return elapsed_time >= expire_time * 60
+
+def clean_cache(cache, expire_time):
+    if not cache:
+        return
+
+    to_remove = []
+    for cache_id, result in cache.items():
+        if expired_result(result, expire_time):
+            to_remove.append(cache_id)
+
+    for cache_id in to_remove:
+        del cache[cache_id]
+
+# logging
 
 def log_out(status, message):
     ensure_path(LOG_OUT_FILE)
