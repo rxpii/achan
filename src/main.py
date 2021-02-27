@@ -35,6 +35,74 @@ async def on_ready():
         if not guild.id in enabled_channels:
             enabled_channels[guild.id] = set()
 
+@bot.command(name='url', help='Dump images from a thread url.')
+async def url(ctx, url: str=None,
+        limit: int=IMGS_LIMIT, offset: int=None):
+    # periodically clean up the cache
+    clean_cache(commands_cache, COMMANDS_CACHE_EXPIRE_TIME_MINS)
+
+    author = ctx.message.author
+    channel = ctx.channel
+    guild = ctx.guild
+
+    if not is_channel_enabled(enabled_channels, guild, channel):
+        return
+
+    if url == None:
+        await ctx.send(f'No URL passed.')
+        return
+
+    extracted_params = extract_url(url)
+
+    if extracted_params == None:
+        await ctx.send(f'Malformed URL.')
+        return
+
+    board, thread_id = extracted_params
+
+    query_id = hash_query(board, thread_id)
+
+    # if the offset is unset, then check if there's a currently cached
+    # next index to use
+    # if not, use 0
+    if not offset:
+        if (author.id in commands_cache
+                and commands_cache[author.id]['query_id'] == query_id):
+            offset = commands_cache[author.id]['next_img_index']
+        else:
+            offset = 0
+
+    # post the images
+    result = await command_tasks.dump_thread(
+            ctx, board, thread_id, limit, offset,
+            results_cache)
+
+    # return if we encountered an error
+    if not result:
+        return
+
+    next_img_index, total_imgs, total_dumped = result
+    if total_dumped > 0:
+        await ctx.send(f"Dumped {total_dumped} total ({next_img_index}/{total_imgs})")
+    else:
+        await ctx.send(f"No images dumped.")
+
+    # cache the command, allowing the user to continue off from previous
+    # commands
+    if next_img_index >= total_imgs:
+        if author.id in commands_cache:
+            del commands_cache[author.id]
+    else:
+        commands_cache[author.id] = {
+                'board': board,
+                'thread_id': thread_id,
+                'query_id': query_id,
+                'next_img_index': next_img_index,
+                'requested_at': time.time(),
+                }
+
+    log_out("INFO", f'Executed command [dump] {author} {channel} {guild}: params {board} {thread_id}')
+
 @bot.command(name='dump', help='Dump images from a thread.')
 async def dump(ctx, board: str=None, thread_id: int=None,
         limit: int=IMGS_LIMIT, offset: int=None):

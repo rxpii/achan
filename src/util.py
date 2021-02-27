@@ -1,4 +1,5 @@
 import os
+import re
 import pickle
 import discord
 import time
@@ -43,6 +44,15 @@ def ensure_path(path):
     directory = os.path.dirname(path)
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+# regex
+
+def extract_url(url):
+    # match the board and thread_id
+    res = re.search(r'.org/(.*)/thread/(.*)$', url)
+    if not res:
+        return None
+    return res.group(1), res.group(2)
 
 # caching
 

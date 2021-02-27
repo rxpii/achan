@@ -12,11 +12,12 @@ async def dump_thread(ctx, board, thread_id, limit=20, offset=0,
     # grab all the images in the thread
     img_urls = await chan_fetch.get_thread_images_urls(
             board, thread_id, results_cache=results_cache)
-    img_urls_length = len(img_urls)
 
     if not img_urls:
         await ctx.send(f'Invalid board or thread id.')
         return None
+
+    img_urls_length = len(img_urls)
 
     end = min(offset + limit, img_urls_length)
     img_urls_to_post = img_urls[offset:end]
